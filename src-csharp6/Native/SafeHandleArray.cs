@@ -32,7 +32,21 @@ namespace Example.Native
         {
         }
 
-        private static (SafeHandle[], GCHandle, bool[]) Initialize(IEnumerable<SafeHandle> handles)
+        private struct InitializationParamaters
+        {
+            public readonly SafeHandle[] HandlesPrivate;
+            public readonly GCHandle DangerousHandleArrayHandle;
+            public readonly bool[] MustReleaseArray;
+
+            public InitializationParamaters(SafeHandle[] handlesPrivate, GCHandle dangerousHandleArrayHandle, bool[] mustReleaseArray)
+            {
+                HandlesPrivate = handlesPrivate;
+                DangerousHandleArrayHandle = dangerousHandleArrayHandle;
+                MustReleaseArray = mustReleaseArray;
+            }
+        }
+
+        private static InitializationParamaters Initialize(IEnumerable<SafeHandle> handles)
         {
             var privateHandles = handles.ToArray(); // Create a private copy so that it cannot be mutated
 
@@ -45,13 +59,15 @@ namespace Example.Native
                 dangerousHandleArray[i] = privateHandles[i].DangerousGetHandle();
             }
 
-            return (privateHandles, GCHandle.Alloc(dangerousHandleArray, GCHandleType.Pinned), mustReleaseArray);
+            return new InitializationParamaters(privateHandles, GCHandle.Alloc(dangerousHandleArray, GCHandleType.Pinned), mustReleaseArray);
         }
 
-        private SafeHandleArray((SafeHandle[] handlesPrivate, GCHandle dangerousHandleArrayHandle, bool[] mustReleaseArray) parameters)
-            : base(parameters.dangerousHandleArrayHandle.AddrOfPinnedObject(), true)
+        private SafeHandleArray(InitializationParamaters parameters)
+            : base(parameters.DangerousHandleArrayHandle.AddrOfPinnedObject(), true)
         {
-            (handlesPrivate, dangerousHandleArrayHandle, mustReleaseArray) = parameters;
+            handlesPrivate = parameters.HandlesPrivate;
+            dangerousHandleArrayHandle = parameters.DangerousHandleArrayHandle;
+            mustReleaseArray = parameters.MustReleaseArray;
         }
 
         protected override bool ReleaseHandle()
