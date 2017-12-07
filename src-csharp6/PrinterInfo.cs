@@ -32,7 +32,9 @@ namespace Example
                 for (;;)
                 {
                     // If you request more than are left, actualCount is 0, so we'll do one at a time.
-                    var next = enumerator.Next(1, out var relativeIdList, out var actualCount);
+                    ItemIdListSafeHandle relativeIdList;
+                    uint actualCount;
+                    var next = enumerator.Next(1, out relativeIdList, out actualCount);
                     next.ThrowIfError();
                     if (next == HResult.False || actualCount != 1) break; // printerChild is junk
 
@@ -52,10 +54,12 @@ namespace Example
 
         private static ItemIdListSafeHandle CreateDevicesAndPrintersIDL()
         {
-            SHGetKnownFolderIDList(FOLDERID.ControlPanelFolder, KF_FLAG.DEFAULT, IntPtr.Zero, out var controlPanelIdList).ThrowIfError();
+            ItemIdListSafeHandle controlPanelIdList;
+            SHGetKnownFolderIDList(FOLDERID.ControlPanelFolder, KF_FLAG.DEFAULT, IntPtr.Zero, out controlPanelIdList).ThrowIfError();
             using (controlPanelIdList)
             {
-                GetShellFolder(controlPanelIdList).ParseDisplayName(IntPtr.Zero, null, "::{A8A91A66-3A7D-4424-8D24-04E180695C7A}", IntPtr.Zero, out var childDevicesAndPriversIdList, IntPtr.Zero);
+                ItemIdListSafeHandle childDevicesAndPriversIdList;
+                GetShellFolder(controlPanelIdList).ParseDisplayName(IntPtr.Zero, null, "::{A8A91A66-3A7D-4424-8D24-04E180695C7A}", IntPtr.Zero, out childDevicesAndPriversIdList, IntPtr.Zero);
                 using (childDevicesAndPriversIdList)
                     return ILCombine(controlPanelIdList, childDevicesAndPriversIdList);
             }
@@ -74,7 +78,8 @@ namespace Example
             // The canonical or "friendly name" needed to match the devmode
             // https://blogs.msdn.microsoft.com/asklar/2009/10/21/getting-the-printer-friendly-name-from-the-device-center-shell-folder/
             // PKEY_Devices_InterfacePaths doesn't seem to ever be found, but PKEY_Devices_FriendlyName works so...
-            shellItem.GetString(PKEY.Devices_FriendlyName, out var friendlyName).ThrowIfError();
+            CoTaskStringSafeHandle friendlyName;
+            shellItem.GetString(PKEY.Devices_FriendlyName, out friendlyName).ThrowIfError();
             return friendlyName.ReadAndFree();
         }
 
@@ -92,13 +97,15 @@ namespace Example
 
         private static IShellFolder GetShellFolder(ItemIdListSafeHandle itemIdList)
         {
-            SHBindToObject(IntPtr.Zero, itemIdList, null, typeof(IShellFolder).GUID, out var objShellFolder).ThrowIfError();
+            object objShellFolder;
+            SHBindToObject(IntPtr.Zero, itemIdList, null, typeof(IShellFolder).GUID, out objShellFolder).ThrowIfError();
             return (IShellFolder)objShellFolder;
         }
 
         private static IShellItem2 GetShellItem(ItemIdListSafeHandle itemIdList)
         {
-            SHCreateItemFromIDList(itemIdList, typeof(IShellItem2).GUID, out var objShellItem).ThrowIfError();
+            object objShellItem;
+            SHCreateItemFromIDList(itemIdList, typeof(IShellItem2).GUID, out objShellItem).ThrowIfError();
             return (IShellItem2)objShellItem;
         }
     }

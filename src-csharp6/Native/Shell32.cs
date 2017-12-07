@@ -218,30 +218,35 @@ namespace Example.Native
 
                     return r;
                 }
-                else if (PropVariantToStringVectorAlloc(this, out var buffer, out var cElems).Code != WinErrorCode.InvalidParameter)
+                else
                 {
-                    using (buffer)
+                    CoTaskMemSafeHandle buffer;
+                    uint cElems;
+                    if (PropVariantToStringVectorAlloc(this, out buffer, out cElems).Code != WinErrorCode.InvalidParameter)
                     {
-                        if (cElems == 0) return Array.Empty<string>();
-
-                        var mustRelease = true;
-                        buffer.DangerousAddRef(ref mustRelease);
-                        try
+                        using (buffer)
                         {
-                            var r = new string[cElems];
-                            var currentElementPointer = (IntPtr*)buffer.DangerousGetHandle();
+                            if (cElems == 0) return Array.Empty<string>();
 
-                            for (var i = 0; i < r.Length; i++)
+                            var mustRelease = true;
+                            buffer.DangerousAddRef(ref mustRelease);
+                            try
                             {
-                                r[i] = CoTaskStringSafeHandle.FromPointer(*currentElementPointer).ReadAndFree();
-                                currentElementPointer++;
-                            }
+                                var r = new string[cElems];
+                                var currentElementPointer = (IntPtr*) buffer.DangerousGetHandle();
 
-                            return r;
-                        }
-                        finally
-                        {
-                            if (mustRelease) buffer.DangerousRelease();
+                                for (var i = 0; i < r.Length; i++)
+                                {
+                                    r[i] = CoTaskStringSafeHandle.FromPointer(*currentElementPointer).ReadAndFree();
+                                    currentElementPointer++;
+                                }
+
+                                return r;
+                            }
+                            finally
+                            {
+                                if (mustRelease) buffer.DangerousRelease();
+                            }
                         }
                     }
                 }

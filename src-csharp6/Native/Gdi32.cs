@@ -34,7 +34,8 @@ namespace Example.Native
 
             public unsafe Bitmap AsBitmap()
             {
-                if (GetObject(this, sizeof(BITMAP), out var info) != sizeof(BITMAP))
+                BITMAP info;
+                if (GetObject(this, sizeof(BITMAP), out info) != sizeof(BITMAP))
                 {
                     if (IsInvalid) throw new ObjectDisposedException(nameof(BitmapSafeHandle));
                     throw new Win32Exception("GetObject failed.");
